@@ -2,6 +2,7 @@ resource "instaclustr_postgresql_cluster_v2" "om_postgres" {
   name                    = "openmetadata-${terraform.workspace}-postgresql"
   sla_tier                = var.postgresql_sla_tier
   postgresql_version      = var.postgresql_version
+  extensions              = [ "PG_CRON" ]
   private_network_cluster = false
   synchronous_mode_strict = false
 
@@ -132,7 +133,7 @@ resource "instaclustr_azure_vnet_peer_v2" "om_opensearch_peer" {
   cdc_id                    = instaclustr_opensearch_cluster_v2.om_opensearch.data_centre[0].id
 }
 
-resource "random_string" "airflow_password" {
+resource "random_string" "openmetadata_airflow_password" {
   length           = 12
   min_lower        = 1
   min_numeric      = 1
@@ -143,7 +144,7 @@ resource "random_string" "airflow_password" {
   override_special = "!"
 }
 
-resource "random_string" "openmetadata_password" {
+resource "random_string" "postgresql_airflow_password" {
   length           = 12
   min_lower        = 1
   min_numeric      = 1
@@ -154,7 +155,18 @@ resource "random_string" "openmetadata_password" {
   override_special = "!"
 }
 
-resource "random_string" "opensearch_password" {
+resource "random_string" "postgresql_openmetadata_password" {
+  length           = 12
+  min_lower        = 1
+  min_numeric      = 1
+  min_special      = 1
+  min_upper        = 1
+  numeric          = true
+  special          = true
+  override_special = "!"
+}
+
+resource "random_string" "opensearch_openmetadata_password" {
   length           = 12
   min_lower        = 1
   min_numeric      = 1
@@ -174,9 +186,9 @@ resource "terraform_data" "setup_postgresql" {
     environment = {
       firewall_depends_on = instaclustr_cluster_network_firewall_rules_v2.om_postgres_firewall.id
       host                = instaclustr_postgresql_cluster_v2.om_postgres.data_centre[0].nodes[0].public_address
-      ps_af_password      = random_string.airflow_password.result
+      ps_af_password      = random_string.postgresql_airflow_password.result
       ps_ic_password      = instaclustr_postgresql_cluster_v2.om_postgres.default_user_password
-      ps_om_password      = random_string.openmetadata_password.result
+      ps_om_password      = random_string.postgresql_openmetadata_password.result
     }
   }
 }
@@ -191,7 +203,7 @@ resource "terraform_data" "setup_opensearch" {
       firewall_depends_on = instaclustr_cluster_network_firewall_rules_v2.om_opensearch_firewall.id
       host                = instaclustr_opensearch_cluster_v2.om_opensearch.load_balancer_connection_url
       os_ic_password      = instaclustr_opensearch_cluster_v2.om_opensearch.default_user_password
-      os_om_password      = random_string.opensearch_password.result
+      os_om_password      = random_string.opensearch_openmetadata_password.result
     }
   }
 }
